@@ -1,18 +1,15 @@
+
+import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
 # --------------------------------
-# 1. 페이지 기본 설정
+# 1. 페이지 제목
 # --------------------------------
 
-st.set_page_config(
-    page_title="서울 관광지 TOP 10",
-    page_icon="🗺️",
-    layout="wide"
-)
-
 st.title("🗺️ 외국인 관광객이 좋아하는 서울 TOP 10")
+
 st.write(
     "서울의 대표 관광 명소 10곳을 지도에서 확인하고 "
     "각 관광지의 매력을 알아보세요! ✨"
@@ -20,7 +17,7 @@ st.write(
 
 st.info(
     "외국인 관광객 선호도와 서울의 대표 관광 코스를 "
-    "참고하여 선정한 추천 관광지입니다."
+    "참고하여 구성한 추천 관광지입니다."
 )
 
 # --------------------------------
@@ -121,7 +118,7 @@ attractions = [
 ]
 
 # --------------------------------
-# 3. 서울 지도 만들기
+# 3. 서울 지도 생성
 # --------------------------------
 
 seoul_map = folium.Map(
@@ -131,11 +128,11 @@ seoul_map = folium.Map(
     control_scale=True
 )
 
-# 관광지 마커 모아보기
+# 관광지 마커 그룹
 marker_cluster = MarkerCluster().add_to(seoul_map)
 
 # --------------------------------
-# 4. 지도에 관광지 표시
+# 4. 관광지 위치 표시
 # --------------------------------
 
 for place in attractions:
@@ -185,7 +182,7 @@ for place in attractions:
     ).add_to(marker_cluster)
 
 # --------------------------------
-# 5. 지도 화면 출력
+# 5. 지도 출력
 # --------------------------------
 
 st.subheader("📍 서울 관광지 위치 지도")
@@ -198,7 +195,7 @@ st_folium(
 )
 
 # --------------------------------
-# 6. 관광지 설명 출력
+# 6. 관광지 설명
 # --------------------------------
 
 st.divider()
@@ -231,7 +228,7 @@ for i in range(0, len(attractions), 2):
             st.markdown("---")
 
 # --------------------------------
-# 7. 하단 안내
+# 7. 마무리
 # --------------------------------
 
 st.subheader("🌏 서울 여행을 즐겨보세요!")
