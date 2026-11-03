@@ -26,57 +26,57 @@ st.write(
 st.divider()
 
 # =====================================
-# 3. CSV 파일 불러오기
+# 3. CSV 파일 경로 설정
+# =====================================
+# 현재 파일은 pages 폴더 안에 있으므로
+# parent.parent를 사용하여 상위 폴더로 이동
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+CSV_PATH = BASE_DIR / "countriesMBTI_16types.csv"
+
+# =====================================
+# 4. CSV 데이터 불러오기
 # =====================================
 @st.cache_data
 def load_data():
 
-    # app.py가 위치한 폴더
-    base_path = Path(__file__).resolve().parent
-
-    # CSV 파일 경로
-    file_path = base_path / "countriesMBTI_16types.csv"
-
-    # 파일 존재 확인
-    if not file_path.exists():
+    if not CSV_PATH.exists():
 
         st.error("❌ CSV 파일을 찾을 수 없습니다.")
 
-        st.write("현재 앱 경로:")
-        st.code(str(base_path))
+        st.write("현재 페이지 위치:")
+        st.code(str(Path(__file__).resolve()))
 
-        st.write("현재 폴더의 파일 목록:")
+        st.write("CSV를 찾는 경로:")
+        st.code(str(CSV_PATH))
+
+        st.write("상위 폴더의 파일 목록:")
 
         st.code(
             "\n".join(
-                file.name for file in base_path.iterdir()
+                file.name for file in BASE_DIR.iterdir()
             )
         )
 
         st.warning(
-            "app.py와 countriesMBTI_16types.csv 파일이 "
-            "같은 폴더에 있는지 확인해 주세요."
+            "countriesMBTI_16types.csv 파일이 "
+            "app.py와 같은 상위 폴더에 있는지 확인해 주세요."
         )
 
         st.stop()
 
-    # CSV 읽기
     try:
         data = pd.read_csv(
-            file_path,
+            CSV_PATH,
             encoding="utf-8-sig"
         )
 
     except UnicodeDecodeError:
         data = pd.read_csv(
-            file_path,
+            CSV_PATH,
             encoding="cp949"
         )
-
-    # 데이터 확인
-    if "Country" not in data.columns:
-        st.error("CSV 파일에 Country 열이 없습니다.")
-        st.stop()
 
     return data
 
@@ -84,18 +84,21 @@ def load_data():
 df = load_data()
 
 # =====================================
-# 4. MBTI 유형 및 국가 목록
+# 5. 데이터 확인
 # =====================================
+if "Country" not in df.columns:
+    st.error("CSV 파일에 Country 열이 없습니다.")
+    st.stop()
+
 mbti_types = [
     col for col in df.columns
     if col != "Country"
 ]
 
 if len(mbti_types) != 16:
-    st.error("MBTI 유형 데이터가 16개가 아닙니다.")
+    st.error("MBTI 데이터가 16개가 아닙니다.")
     st.stop()
 
-# 숫자 데이터 변환
 for mbti in mbti_types:
     df[mbti] = pd.to_numeric(
         df[mbti],
@@ -111,7 +114,7 @@ if len(countries) == 0:
     st.stop()
 
 # =====================================
-# 5. 국가 선택
+# 6. 국가 선택
 # =====================================
 st.markdown("### 🗺️ 국가 선택")
 
@@ -127,13 +130,13 @@ selected_country = st.selectbox(
     index=default_index
 )
 
-# 선택 국가 데이터
+# 선택한 국가 데이터
 country_data = df[
     df["Country"].astype(str) == selected_country
 ].iloc[0]
 
 # =====================================
-# 6. MBTI 비율 계산 및 정렬
+# 7. MBTI 비율 계산
 # =====================================
 chart_data = pd.DataFrame({
     "MBTI": mbti_types,
@@ -143,7 +146,6 @@ chart_data = pd.DataFrame({
     ]
 })
 
-# 결측치 제거
 chart_data = chart_data.dropna(
     subset=["비율"]
 )
@@ -155,9 +157,8 @@ chart_data = chart_data.sort_values(
 ).reset_index(drop=True)
 
 # =====================================
-# 7. 그래프 색상 설정
+# 8. 그래프 색상 설정
 # =====================================
-
 def hex_to_rgb(color):
 
     color = color.lstrip("#")
@@ -177,10 +178,7 @@ def rgb_to_hex(rgb):
 
 def blue_gradient(count):
 
-    # 진한 파랑
     start = hex_to_rgb("#2563EB")
-
-    # 연한 파랑
     end = hex_to_rgb("#DBEAFE")
 
     colors = []
@@ -204,7 +202,7 @@ def blue_gradient(count):
     return colors
 
 
-# 1위 빨간색
+# 1위는 빨간색
 # 나머지는 파란색 그라데이션
 colors = (
     ["#EF4444"] +
@@ -212,7 +210,7 @@ colors = (
 )
 
 # =====================================
-# 8. 1위 MBTI 분석
+# 9. 1위 MBTI 분석
 # =====================================
 top_mbti = chart_data.iloc[0]
 
@@ -241,7 +239,7 @@ with col3:
     )
 
 # =====================================
-# 9. MBTI 막대그래프
+# 10. MBTI 막대그래프
 # =====================================
 st.divider()
 
@@ -255,16 +253,12 @@ fig.add_trace(
     go.Bar(
         x=chart_data["비율"],
         y=chart_data["MBTI"],
-
-        # 가로 막대그래프
         orientation="h",
 
-        # 색상 지정
         marker=dict(
             color=colors
         ),
 
-        # 막대 끝에 비율 표시
         text=[
             f"{value:.2f}%"
             for value in chart_data["비율"]
@@ -273,7 +267,6 @@ fig.add_trace(
         textposition="outside",
         cliponaxis=False,
 
-        # 마우스 올렸을 때 표시
         hovertemplate=(
             "<b>%{y}</b><br>"
             "비율: %{x:.2f}%"
@@ -283,7 +276,6 @@ fig.add_trace(
 )
 
 fig.update_layout(
-
     height=650,
 
     xaxis=dict(
@@ -309,9 +301,7 @@ fig.update_layout(
     plot_bgcolor="rgba(0,0,0,0)",
     paper_bgcolor="rgba(0,0,0,0)",
 
-    font=dict(
-        size=14
-    )
+    font=dict(size=14)
 )
 
 st.plotly_chart(
@@ -320,7 +310,7 @@ st.plotly_chart(
 )
 
 # =====================================
-# 10. MBTI 순위표
+# 11. MBTI 순위표
 # =====================================
 st.divider()
 
@@ -348,7 +338,7 @@ st.dataframe(
 )
 
 # =====================================
-# 11. 데이터 정보
+# 12. 데이터 정보
 # =====================================
 st.divider()
 
@@ -367,7 +357,7 @@ info2.metric(
 )
 
 # =====================================
-# 12. 하단 안내
+# 13. 하단 안내
 # =====================================
 st.divider()
 
