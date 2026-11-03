@@ -369,3 +369,115 @@ st.caption(
     "※ 제공된 CSV 데이터 기준이며, "
     "실제 국가 전체 인구의 공식 통계와 다를 수 있습니다."
 )
+
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from pathlib import Path
+
+# CSV 파일 경로 설정
+BASE_DIR = Path(__file__).resolve().parent.parent
+CSV_PATH = BASE_DIR / "countriesMBTI_16types.csv"
+
+# 페이지 설정
+# 메인 app.py에서 이미 설정했다면 아래 줄은 삭제하세요.
+st.set_page_config(page_title="세계 MBTI 순위", page_icon="🌍", layout="wide")
+
+st.title("🌍 세계 MBTI 국가 순위")
+st.write("MBTI를 선택하고 해당 유형의 비율이 높은 국가를 확인해 보세요!")
+
+# CSV 불러오기
+try:
+    df = pd.read_csv(CSV_PATH)
+except FileNotFoundError:
+    st.error("CSV 파일을 찾을 수 없습니다. 최상위 폴더에 파일을 넣어주세요.")
+    st.stop()
+
+# MBTI 유형 선택
+mbti_columns = [col for col in df.columns if col != "Country"]
+
+selected_mbti = st.selectbox(
+    "🧠 MBTI 유형을 선택하세요!",
+    mbti_columns
+)
+
+# 선택한 MBTI의 국가별 비율 정렬
+rank_df = df[["Country", selected_mbti]].copy()
+rank_df[selected_mbti] = rank_df[selected_mbti] * 100
+rank_df = rank_df.sort_values(
+    by=selected_mbti,
+    ascending=False
+).reset_index(drop=True)
+
+# 순위 추가
+rank_df.insert(0, "순위", range(1, len(rank_df) + 1))
+
+# 막대그래프 색상 설정
+colors = [
+    "#EF4444" if i == 0 else
+    f"#{int(37 + (i / max(len(rank_df)-1, 1)) * 180):02X}"
+    "80E5"
+    for i in range(len(rank_df))
+]
+
+# 그래프
+fig = px.bar(
+    rank_df,
+    x=selected_mbti,
+    y="Country",
+    orientation="h",
+    text=selected_mbti,
+    title=f"🏆 {selected_mbti} 비율이 높은 국가 TOP 순위",
+    labels={
+        selected_mbti: "비율 (%)",
+        "Country": "국가"
+    }
+)
+
+# 1위는 빨간색, 나머지는 파란색 계열
+bar_colors = [
+    "#EF4444" if i == 0 else
+    f"rgba(37, 99, 235, {1 - i / max(len(rank_df), 1) * 0.7})"
+    for i in range(len(rank_df))
+]
+
+fig.update_traces(
+    marker_color=bar_colors,
+    texttemplate="%{text:.2f}%",
+    textposition="outside"
+)
+
+fig.update_layout(
+    yaxis=dict(
+        autorange="reversed",
+        title="국가"
+    ),
+    xaxis_title="MBTI 비율 (%)",
+    height=max(600, len(rank_df) * 25),
+    showlegend=False
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# 국가별 순위표
+st.subheader("📊 국가별 순위표")
+
+display_df = rank_df.copy()
+display_df[selected_mbti] = display_df[selected_mbti].map(
+    lambda x: f"{x:.2f}%"
+)
+
+st.dataframe(
+    display_df,
+    use_container_width=True,
+    hide_index=True
+)
+
+# 1위 국가 표시
+top_country = rank_df.iloc[0]
+
+st.success(
+    f"🥇 {selected_mbti} 비율 1위 국가는 "
+    f"{top_country['Country']}입니다! "
+    f"({top_country[selected_mbti]:.2f}%)"
+)
