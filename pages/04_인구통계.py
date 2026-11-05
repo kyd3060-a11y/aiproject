@@ -441,3 +441,186 @@ st.caption(
 st.caption(
     "※ 현재 CSV에는 2025년 데이터만 포함되어 있습니다."
 )
+
+# --------------------------------------------------
+# 11. 연령대별 인구가 가장 많은 자치구 TOP 10
+# --------------------------------------------------
+
+st.markdown("---")
+
+st.markdown("### 🏆 연령대별 인구가 가장 많은 자치구")
+
+st.write(
+    "원하는 연령대를 선택하면 서울시 25개 자치구 중 "
+    "해당 연령의 인구가 많은 지역을 순서대로 보여줍니다."
+)
+
+# 연령대 선택
+rank_age = st.selectbox(
+    "🎂 비교할 연령대 선택",
+    age_labels,
+    index=0,
+    key="rank_age"
+)
+
+# 선택한 연령대에 해당하는 CSV 열 이름 만들기
+rank_column = (
+    f"{selected_year}년_"
+    f"{gender_code[selected_gender]}"
+    f"거주자_{rank_age}"
+)
+
+if rank_column not in df.columns:
+    st.error("선택한 연령대의 데이터를 찾을 수 없습니다.")
+
+else:
+
+    # 서울특별시 전체 행 제외하고 자치구만 추출
+    rank_df = df[
+        df["지역명"].notna()
+    ].copy()
+
+    # 선택한 연령대 인구 데이터 가져오기
+    rank_df["인구수"] = pd.to_numeric(
+        rank_df[rank_column],
+        errors="coerce"
+    )
+
+    # 인구수가 많은 순서대로 정렬
+    rank_df = rank_df.sort_values(
+        by="인구수",
+        ascending=False
+    )
+
+    # 상위 10개 자치구
+    top10 = rank_df.head(10).copy()
+
+    # 1위 자치구 정보
+    if not top10.empty:
+
+        first_district = top10.iloc[0]["지역명"]
+        first_population = int(top10.iloc[0]["인구수"])
+
+        st.success(
+            f"🥇 {rank_age} {selected_gender} 인구가 "
+            f"가장 많은 지역은 {first_district}입니다! "
+            f"({first_population:,}명)"
+        )
+
+        # 상위 10개 막대그래프
+        fig_rank = go.Figure()
+
+        fig_rank.add_trace(
+            go.Bar(
+                x=top10["인구수"],
+                y=top10["지역명"],
+                orientation="h",
+
+                marker=dict(
+                    color="#FFD700",
+                    line=dict(
+                        color="#D6A900",
+                        width=1
+                    )
+                ),
+
+                text=[
+                    f"{int(v):,}명"
+                    for v in top10["인구수"]
+                ],
+
+                textposition="outside",
+
+                hovertemplate=(
+                    "<b>%{y}</b><br>"
+                    "인구수: %{x:,}명"
+                    "<extra></extra>"
+                )
+            )
+        )
+
+        fig_rank.update_layout(
+            title=dict(
+                text=(
+                    f"{selected_year}년 "
+                    f"{rank_age} "
+                    f"{selected_gender} 인구 TOP 10"
+                ),
+                x=0.5,
+                xanchor="center",
+                font=dict(
+                    family="NanumGothic, sans-serif",
+                    size=20
+                )
+            ),
+
+            xaxis=dict(
+                title="인구수 (명)",
+                showgrid=True,
+                gridcolor="#DDDDDD",
+                dtick=100000,
+                tickformat=",d"
+            ),
+
+            yaxis=dict(
+                title="행정구",
+                autorange="reversed",
+                showgrid=False,
+                categoryorder="array",
+                categoryarray=top10["지역명"].tolist()
+            ),
+
+            font=dict(
+                family="NanumGothic, sans-serif",
+                size=13
+            ),
+
+            plot_bgcolor="white",
+            paper_bgcolor="white",
+
+            height=500,
+
+            margin=dict(
+                l=70,
+                r=100,
+                t=80,
+                b=60
+            ),
+
+            showlegend=False
+        )
+
+        st.plotly_chart(
+            fig_rank,
+            use_container_width=True
+        )
+
+        # 상위 10개 데이터 표
+        with st.expander("📋 자치구별 인구 순위 상세 보기"):
+
+            display_df = top10[
+                ["지역명", "인구수"]
+            ].copy()
+
+            display_df.insert(
+                0,
+                "순위",
+                range(1, len(display_df) + 1)
+            )
+
+            display_df.columns = [
+                "순위",
+                "행정구",
+                "인구수"
+            ]
+
+            display_df["인구수"] = (
+                display_df["인구수"]
+                .map(lambda x: f"{int(x):,}명")
+            )
+
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                hide_index=True
+            )
